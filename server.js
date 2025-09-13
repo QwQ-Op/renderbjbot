@@ -1,11 +1,18 @@
 import express from "express";
 import interactions from "./api/interactions.js";
+
 const app = express();
-app.use(express.json({
+
+// Middleware to keep raw body for signature verification
+app.use(
+  express.json({
     verify: (req, res, buf) => {
-        req.rawBody = buf.toString();
-    }
-}));
+      req.rawBody = buf; // store as Buffer, not string
+    },
+  })
+);
+
 app.post("/interactions", interactions);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
