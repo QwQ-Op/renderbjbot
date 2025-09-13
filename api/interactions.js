@@ -12,17 +12,19 @@ console.log("Loaded commands:", Object.keys(commands));
 export default async function handler(req, res) {
   const signature = req.header("X-Signature-Ed25519");
   const timestamp = req.header("X-Signature-Timestamp");
-  const body = req.rawBody;
 
   if (!signature || !timestamp) {
     return res.status(401).send("Missing signature");
   }
 
-  const isVerified = nacl.sign.detached.verify(
-    Buffer.from(timestamp + body),
-    Buffer.from(signature, "hex"),
-    Buffer.from(process.env.PUBLIC_KEY, "hex")
-  );
+const body = req.rawBody; // Buffer
+
+const isVerified = nacl.sign.detached.verify(
+  Buffer.concat([Buffer.from(timestamp), body]),
+  Buffer.from(signature, "hex"),
+  Buffer.from(process.env.DISCORD_PUBLIC_KEY, "hex")
+);
+
 
   if (!isVerified) {
     return res.status(401).send("Invalid signature");
@@ -51,3 +53,4 @@ export default async function handler(req, res) {
 
   return res.status(400).send("Unhandled interaction type");
 }
+
