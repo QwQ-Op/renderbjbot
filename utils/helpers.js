@@ -134,7 +134,13 @@ export function createButtonsRow(buttonsConfig = []) {
             disabled: item.disabled ?? false
         }
         if (item.label) btn.label = item.label;
-        if (item.emoji) btn.emoji = item.emoji;
+
+        if (item.emoji) {
+            btn.emoji = typeof item.emoji === "string"
+                ? { name: item.emoji, id: null }
+                : item.emoji;
+        }
+
         if (item.url && item.style === 5) btn.url = item.url;
         actionRow.components.push(btn)
     }
