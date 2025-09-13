@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   if (data.type === 2) {
     const command = commands[data.data.name];
     if (!command) {
-      return res.status(200).json({ type: 4, data: { content: "❌ Unknown command." } });
+      return res.status(200).json({ type: 4, data: { flags: 64, content: "❌ Unknown command." } });
     }
     const response = await command.run(data);
     return res.status(200).json(response);
@@ -54,20 +54,20 @@ export default async function handler(req, res) {
     const handlerMap = commandButtonHandlers[cmdName];
 
     if (!gameMap || !handlerMap) {
-      return res.status(200).json({ type: 4, data: { content: "❌ Unknown interaction." } });
+      return res.status(200).json({ type: 4, data: { flags: 64, content: "❌ Unknown interaction." } });
     }
 
     const game = gameMap.get(userId);
-    if (!game) {
-      return res.status(200).json({ type: 4, data: { content: "❌ You have no active game. Start a new one!" } });
+    if (!game && action !== "restart") {
+      return res.status(200).json({ type: 4, data: { flags: 64, content: "❌ You have no active game. Start a new one!" } });
     }
 
     const actionHandler = handlerMap[action];
     if (!actionHandler) {
-      return res.status(200).json({ type: 4, data: { content: "❌ Unknown button action." } });
+      return res.status(200).json({ type: 4, data: { flags: 64, content: "❌ Unknown button action." } });
     }
 
-    const response = await actionHandler(game, userId);
+    const response = await actionHandler(game, userId, data);
     return res.status(200).json(response);
   }
 
