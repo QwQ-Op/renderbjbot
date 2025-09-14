@@ -18,7 +18,7 @@ export default class Blackjack {
   }
 
   formatHand(hand) {
-    return hand.map(c => c.display).join(" ");
+    return hand.map(c => `\`${c.display}\``).join(" ");
   }
 
   startGame() {
@@ -52,7 +52,8 @@ export default class Blackjack {
       busted = true;
       this.finishedHands.push({
         index: this.currentHandIndex,
-        cards: [...hand]
+        cards: [...hand],
+        resultEmoji: "🔳"
       });
 
       if (this.currentHandIndex < this.playerHands.length - 1) {
@@ -72,7 +73,8 @@ export default class Blackjack {
   stand() {
     this.finishedHands.push({
       index: this.currentHandIndex,
-      cards: [...this.playerHands[this.currentHandIndex]]
+      cards: [...this.playerHands[this.currentHandIndex]],
+      resultEmoji: "🔳"
     });
     if (this.isGameOver) {
       return {
@@ -145,16 +147,38 @@ export default class Blackjack {
 
   getFinalResults() {
     const dealerScore = this.getHandValue(this.dealer);
+
     return this.playerHands.map((hand, i) => {
       const playerScore = this.getHandValue(hand);
       const display = this.playerHands.length > 1 ? `Hand ${i + 1}:` : '';
+      let result;
+      let emoji = "🤝";
 
-      if (playerScore > 21) return `${display} Busted 💥`;
-      if (dealerScore > 21) return `${display} Dealer busted, you win! 🏆`;
-      if (playerScore === dealerScore) return `${display} Tie 🤝`;
-      if (playerScore > dealerScore) return `${display} You win! 🏆`;
-      return `${display} Dealer wins 😢`;
-    });
+      if (playerScore > 21) {
+        result = `${display} Busted 💥`;
+        emoji = "💥";
+      } else if (dealerScore > 21) {
+        result = `${display} Dealer busted, you win! 🏆`;
+        emoji = "🏆";
+      } else if (playerScore === dealerScore) {
+        result = `${display} Tie 🤝`;
+        emoji = "🤝";
+      } else if (playerScore > dealerScore) {
+        result = `${display} You win! 🏆`;
+        emoji = "🏆";
+      } else {
+        result = `${display} Dealer wins 😢`;
+        emoji = "😢";
+      }
+
+      // also update finishedHands if it exists
+      if (this.finishedHands) {
+        const fHand = this.finishedHands.find(h => h.index === i);
+        if (fHand) fHand.resultEmoji = emoji;
+      }
+
+      return result;
+    }).join("\n");
   }
 
 }
