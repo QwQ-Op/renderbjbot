@@ -1,5 +1,5 @@
 import Blackjack from "../utils/Blackjack.js";
-import { createButtonsRow, createContainerUI, sendFollowup } from "../utils/helpers.js";
+import { createButtonsRow, createContainerUI } from "../utils/helpers.js";
 
 const games = new Map();
 
@@ -15,6 +15,10 @@ const blackjack = {
 function startNewGame(userId, isUpdate = false) {
   const game = new Blackjack();
   const { player, dealer } = game.startGame();
+
+  if (games.has(userId)) {
+    games.delete(userId); // clear old game first
+  }
   games.set(userId, game);
 
   const initButtons = [
@@ -44,7 +48,7 @@ function startNewGame(userId, isUpdate = false) {
       },
       {
         type: "displaytext",
-        text: `**Your cards:** \`${game.formatHand(player[game.currentHandIndex])}\` \` ${game.getHandValue(player[game.currentHandIndex])} \``,
+        text: `**Your cards:** ${game.formatHand(player[game.currentHandIndex])} **\` ${game.getHandValue(player[game.currentHandIndex])} \`**`,
       },
       {
         type: "separator",
@@ -52,7 +56,7 @@ function startNewGame(userId, isUpdate = false) {
       },
       {
         type: "displaytext",
-        text: `**Dealer's card:** \`${game.formatHand(dealer)}\` \` ${game.getHandValue([dealer[0]])} \``
+        text: `**Dealer's card:** ${game.formatHand(dealer)} **\` ${game.getHandValue([dealer[0]])} \`**`
       },
       {
         type: "separator"
@@ -78,7 +82,7 @@ const buttonHandlers = {
     const { hands, gameOver, busted, handIndex } = game.hit();
     const playerCards = hands[game.currentHandIndex]
     const dealerCards = gameOver ?
-      game.dealer : [game.dealer[0], { display: "❓" }];
+      game.dealer : [game.dealer[0], { display: "❓❓" }];
 
     const playerHandDisplay = game.playerHands.length > 1 ?
       `Hand ${game.currentHandIndex + 1}` : "Your cards"
@@ -115,7 +119,7 @@ const buttonHandlers = {
           },
           {
             type: "displaytext",
-            text: `**${playerHandDisplay}:** \`${game.formatHand(playerCards)}\` \` ${game.getHandValue(playerCards)} \``
+            text: `**${playerHandDisplay}:** ${game.formatHand(playerCards)} **\` ${game.getHandValue(playerCards)} \`**`
           },
           {
             type: "separator",
@@ -123,7 +127,7 @@ const buttonHandlers = {
           },
           {
             type: "displaytext",
-            text: `**Dealer's card:** \`${game.formatHand(dealerCards)}\` \` ${game.getHandValue(game.dealer)} \``
+            text: `**Dealer's card:** ${game.formatHand(dealerCards)} **\` ${game.getHandValue([game.dealer[0]])} \`**`
           },
           {
             type: "separator",
@@ -137,14 +141,14 @@ const buttonHandlers = {
           {
             type: "actionrow",
             row: createButtonsRow([
-              { emoji: "👐", customId: `blackjack:showHands:${userId}`, style: 2 },
+              { emoji: "📜", customId: `blackjack:showHands:${userId}`, style: 2 },
               { emoji: "🔁", customId: `blackjack:restart:${userId}`, style: 2 }
             ])
           }
         ]
       }
 
-      games.delete(userId);
+      //games.delete(userId);
       return {
         type: 7,
         data: {
@@ -178,7 +182,7 @@ const buttonHandlers = {
           },
           {
             type: "displaytext",
-            text: `**${playerHandDisplay}:** \`${game.formatHand(playerCards)}\` \` ${game.getHandValue(playerCards)} \``
+            text: `**${playerHandDisplay}:** ${game.formatHand(playerCards)} **\` ${game.getHandValue(playerCards)} \`**`
           },
           {
             type: "separator",
@@ -186,7 +190,7 @@ const buttonHandlers = {
           },
           {
             type: "displaytext",
-            text: `**Dealer's card:** \`${game.formatHand(dealerCards)}\` \` ${game.getHandValue([game.dealer[0]])} \``
+            text: `**Dealer's card:** ${game.formatHand(dealerCards)} **\` ${game.getHandValue([game.dealer[0]])} \`**`
           },
           {
             type: "separator"
@@ -202,7 +206,7 @@ const buttonHandlers = {
           {
             type: "actionrow",
             row: createButtonsRow([
-              { emoji: "👐", customId: `blackjack:showHands:${userId}`, style: 2 },
+              { emoji: "📜", customId: `blackjack:showHands:${userId}`, style: 2 },
             ])
           }
         )
@@ -219,6 +223,8 @@ const buttonHandlers = {
   },
   stand: async (game, userId) => {
     const { player, dealer, next, handIndex, result } = game.stand();
+    const dealerCards = game.isGameOver ?
+      game.dealer : [game.dealer[0], { display: "❓❓" }];
 
     if (next) {
       const nextHand = game.playerHands[game.currentHandIndex];
@@ -247,7 +253,7 @@ const buttonHandlers = {
           },
           {
             type: "displaytext",
-            text: `**Hand ${game.currentHandIndex + 1}:** \`${game.formatHand(nextHand)}\` \` ${game.getHandValue(nextHand)} \``
+            text: `**Hand ${game.currentHandIndex + 1}:** ${game.formatHand(nextHand)} **\` ${game.getHandValue(nextHand)} \`**`
           },
           {
             type: "separator",
@@ -255,7 +261,7 @@ const buttonHandlers = {
           },
           {
             type: "displaytext",
-            text: `**Dealer's card:** \`${game.formatHand(dealer)}\` \` ${game.getHandValue([game.dealer[0]])} \``
+            text: `**Dealer's card:** ${game.formatHand(dealerCards)} **\` ${game.getHandValue([game.dealer[0]])} \`**`
           },
           {
             type: "separator"
@@ -271,7 +277,7 @@ const buttonHandlers = {
           {
             type: "actionrow",
             row: createButtonsRow([
-              { emoji: "👐", customId: `blackjack:showHands:${userId}`, style: 2 },
+              { emoji: "📜", customId: `blackjack:showHands:${userId}`, style: 2 },
             ])
           }
         )
@@ -285,7 +291,9 @@ const buttonHandlers = {
         }
       };
     } else {
-      games.delete(userId);
+      //games.delete(userId);
+      const display = game.playerHands.length > 1 ?
+        `Hand ${game.currentHandIndex + 1}` : "Your cards";
       const standContainer = createContainerUI({
         containerItems: [
           {
@@ -299,7 +307,7 @@ const buttonHandlers = {
           },
           {
             type: "displaytext",
-            text: `**Your cards:** \`${game.formatHand(player[game.currentHandIndex])}\` \` ${game.getHandValue(player[game.currentHandIndex])} \``
+            text: `**${display}:** ${game.formatHand(player[game.currentHandIndex])} **\` ${game.getHandValue(player[game.currentHandIndex])} \`**`
           },
           {
             type: "separator",
@@ -307,7 +315,7 @@ const buttonHandlers = {
           },
           {
             type: "displaytext",
-            text: `**Dealer's card:** \`${game.formatHand(dealer)}\` \` ${game.getHandValue(dealer)} \``
+            text: `**Dealer's card:** ${game.formatHand(dealerCards)} **\` ${game.getHandValue(dealer)} \`**`
           },
           {
             type: "separator",
@@ -321,6 +329,7 @@ const buttonHandlers = {
           {
             type: "actionrow",
             row: createButtonsRow([
+              { emoji: "📜", customId: `blackjack:showHands:${userId}`, style: 2 },
               { emoji: "🔁", customId: `blackjack:restart:${userId}`, style: 2 },
             ])
           }
@@ -338,7 +347,7 @@ const buttonHandlers = {
   split: async (game, userId) => {
     game.split();
     const playerCards = game.playerHands[game.currentHandIndex]
-    const dealerCards = [game.dealer[0], { display: "❓" }];
+    const dealerCards = [game.dealer[0], { display: "❓❓" }];
 
     const afterSplitButtons = [
       { emoji: "👊", customId: `blackjack:hit:${userId}`, style: 1 },
@@ -365,7 +374,7 @@ const buttonHandlers = {
         },
         {
           type: "displaytext",
-          text: `**Hand ${game.currentHandIndex + 1}:** \`${game.formatHand(playerCards)}\` \` ${game.getHandValue(playerCards)} \``
+          text: `**Hand ${game.currentHandIndex + 1}:** ${game.formatHand(playerCards)} **\` ${game.getHandValue(playerCards)} \`**`
         },
         {
           type: "separator",
@@ -373,7 +382,7 @@ const buttonHandlers = {
         },
         {
           type: "displaytext",
-          text: `**Dealer's card:** \`${game.formatHand(dealerCards)}\` \` ${game.getHandValue([game.dealer[0]])} \``
+          text: `**Dealer's card:** ${game.formatHand(dealerCards)} **\` ${game.getHandValue([game.dealer[0]])} \`**`
         },
         {
           type: "separator"
@@ -389,7 +398,7 @@ const buttonHandlers = {
         {
           type: "actionrow",
           row: createButtonsRow([
-            { emoji: "👐", customId: `blackjack:showHands:${userId}`, style: 2 },
+            { emoji: "📜", customId: `blackjack:showHands:${userId}`, style: 2 },
           ])
         }
       )
@@ -406,12 +415,12 @@ const buttonHandlers = {
     if (!hands || hands.length === 0) {
       return {
         type: 4,
-        data: { flags: 64, content: "No finished hands yet!" } // ephemeral
+        data: { flags: 64, content: "No hands finished yet!" } // ephemeral
       };
     }
-    
+
     const displayText = hands.map(h =>
-      `**Hand ${h.index + 1}:** ${game.formatHand(h.cards)} → ${game.getHandValue(h.cards)}`
+      `${h.resultEmoji} **Hand ${h.index + 1}:** ${game.formatHand(h.cards)} → ${game.getHandValue(h.cards)}`
     ).join("\n");
 
     const finishedHandsContainer = {
