@@ -1,5 +1,5 @@
 import Blackjack from "../utils/Blackjack.js";
-import { createButtonsRow, createContainerUI } from "../utils/helpers.js";
+import { createButtonsRow, createContainerUI, sendFollowup } from "../utils/helpers.js";
 
 const games = new Map();
 
@@ -17,10 +17,19 @@ function startNewGame(userId, isUpdate = false) {
   const { player, dealer } = game.startGame();
   games.set(userId, game);
 
-  const buttons = createButtonsRow([
-    { label: "Hit", customId: `blackjack:hit:${userId}`, style: 1 },
-    { label: "Stand", customId: `blackjack:stand:${userId}`, style: 2 }
-  ]);
+  const initButtons = [
+    { emoji: "👊", customId: `blackjack:hit:${userId}`, style: 1 },
+    { emoji: "🛑", customId: `blackjack:stand:${userId}`, style: 2 }
+  ]
+
+  if (game.canSplit()) {
+    initButtons.push({
+      style: 3, // success
+      emoji: "➗",
+      customId: `blackjack:split:${userId}`
+    });
+  }
+  const buttons = createButtonsRow(initButtons);
 
   const initContainer = createContainerUI({
     containerItems: [
@@ -35,7 +44,7 @@ function startNewGame(userId, isUpdate = false) {
       },
       {
         type: "displaytext",
-        text: `**Your cards:** \`${player.map(c => c.display).join(" ")}\` \` ${game.getHandValue(player)} \``,
+        text: `**Your cards:** \`${game.formatHand(player[game.currentHandIndex])}\` \` ${game.getHandValue(player[game.currentHandIndex])} \``,
       },
       {
         type: "separator",
@@ -43,7 +52,7 @@ function startNewGame(userId, isUpdate = false) {
       },
       {
         type: "displaytext",
-        text: `**Dealer's card:** \`${dealer.map(c => c.display).join(" ")}\` \` ${game.getHandValue([dealer[0]])} \``
+        text: `**Dealer's card:** \`${game.formatHand(dealer)}\` \` ${game.getHandValue([dealer[0]])} \``
       },
       {
         type: "separator"
@@ -58,7 +67,7 @@ function startNewGame(userId, isUpdate = false) {
     type: isUpdate ? 7 : 4,
     data: {
       flags: 32768,
-      components: [...initContainer]
+      components: initContainer
     }
   };
 
@@ -66,8 +75,14 @@ function startNewGame(userId, isUpdate = false) {
 
 const buttonHandlers = {
   hit: async (game, userId) => {
-    const playerCards = game.hit();
-    const dealerCards = game.isGameOver ? game.dealer : [game.dealer[0], { display: "❓" }];
+    const { hands, gameOver, busted, handIndex } = game.hit();
+    const playerCards = hands[game.currentHandIndex]
+    const dealerCards = gameOver ?
+      game.dealer : [game.dealer[0], { display: "❓" }];
+
+    const playerHandDisplay = game.playerHands.length > 1 ?
+      `Hand ${game.currentHandIndex + 1}` : "Your cards"
+
     const overContainer = createContainerUI({
       containerItems: [
         {
@@ -76,7 +91,6 @@ const buttonHandlers = {
         }
       ]
     })
-
     if (!playerCards) {
       return {
         type: 7,
@@ -87,12 +101,258 @@ const buttonHandlers = {
       };
     }
 
-    const buttons = createButtonsRow([
-      { label: "Hit", customId: `blackjack:hit:${userId}`, style: 1 },
-      { label: "Stand", customId: `blackjack:stand:${userId}`, style: 2 }
-    ]);
+    if (gameOver) {
+      const bustContainer = {
+        containerItems: [
+          {
+            type: "displaytext",
+            text: `## 🃏 Blackjack 🃏`,
+          },
+          {
+            type: "separator",
+            size: 2,
+            showDivider: true
+          },
+          {
+            type: "displaytext",
+            text: `**${playerHandDisplay}:** \`${game.formatHand(playerCards)}\` \` ${game.getHandValue(playerCards)} \``
+          },
+          {
+            type: "separator",
+            showDivider: false
+          },
+          {
+            type: "displaytext",
+            text: `**Dealer's card:** \`${game.formatHand(dealerCards)}\` \` ${game.getHandValue(game.dealer)} \``
+          },
+          {
+            type: "separator",
+            size: 2,
+            showDivider: true
+          },
+          {
+            type: "displaytext",
+            text: `**Result:** ${game.getFinalResults()}`
+          },
+          {
+            type: "actionrow",
+            row: createButtonsRow([
+              { emoji: "👐", customId: `blackjack:showHands:${userId}`, style: 2 },
+              { emoji: "🔁", customId: `blackjack:restart:${userId}`, style: 2 }
+            ])
+          }
+        ]
+      }
 
-    const hitContainer = createContainerUI({
+      games.delete(userId);
+      return {
+        type: 7,
+        data: {
+          flags: 32768,
+          components: createContainerUI(bustContainer)
+        }
+      };
+    } else {
+      const hitButtons = [
+        { emoji: "👊", customId: `blackjack:hit:${userId}`, style: 1 },
+        { emoji: "🛑", customId: `blackjack:stand:${userId}`, style: 2 }
+      ];
+      if (game.canSplit()) {
+        hitButtons.push({
+          style: 3, // success
+          emoji: "➗",
+          customId: `blackjack:split:${userId}`
+        });
+      }
+
+      const hitContainer = {
+        containerItems: [
+          {
+            type: "displaytext",
+            text: `## 🃏 Blackjack 🃏`,
+          },
+          {
+            type: "separator",
+            size: 2,
+            showDivider: true
+          },
+          {
+            type: "displaytext",
+            text: `**${playerHandDisplay}:** \`${game.formatHand(playerCards)}\` \` ${game.getHandValue(playerCards)} \``
+          },
+          {
+            type: "separator",
+            showDivider: false
+          },
+          {
+            type: "displaytext",
+            text: `**Dealer's card:** \`${game.formatHand(dealerCards)}\` \` ${game.getHandValue([game.dealer[0]])} \``
+          },
+          {
+            type: "separator"
+          },
+          {
+            type: 'actionrow',
+            row: createButtonsRow(hitButtons)
+          }
+        ]
+      }
+      if (game.playerHands.length > 1) {
+        hitContainer.containerItems.push(
+          {
+            type: "actionrow",
+            row: createButtonsRow([
+              { emoji: "👐", customId: `blackjack:showHands:${userId}`, style: 2 },
+            ])
+          }
+        )
+      }
+
+      return {
+        type: 7,
+        data: {
+          flags: 32768,
+          components: createContainerUI(hitContainer)
+        }
+      };
+    }
+  },
+  stand: async (game, userId) => {
+    const { player, dealer, next, handIndex, result } = game.stand();
+
+    if (next) {
+      const nextHand = game.playerHands[game.currentHandIndex];
+      const nextHandButtons = [
+        { emoji: "👊", customId: `blackjack:hit:${userId}`, style: 1 },
+        { emoji: "🛑", customId: `blackjack:stand:${userId}`, style: 2 }
+      ]
+      if (game.canSplit()) {
+        nextHandButtons.push({
+          style: 3, // success
+          emoji: "➗",
+          customId: `blackjack:split:${userId}`
+        });
+      }
+
+      const nextHandContainer = {
+        containerItems: [
+          {
+            type: "displaytext",
+            text: `## 🃏 Blackjack 🃏`,
+          },
+          {
+            type: "separator",
+            size: 2,
+            showDivider: true
+          },
+          {
+            type: "displaytext",
+            text: `**Hand ${game.currentHandIndex + 1}:** \`${game.formatHand(nextHand)}\` \` ${game.getHandValue(nextHand)} \``
+          },
+          {
+            type: "separator",
+            showDivider: false
+          },
+          {
+            type: "displaytext",
+            text: `**Dealer's card:** \`${game.formatHand(dealer)}\` \` ${game.getHandValue([game.dealer[0]])} \``
+          },
+          {
+            type: "separator"
+          },
+          {
+            type: 'actionrow',
+            row: createButtonsRow(nextHandButtons)
+          }
+        ]
+      }
+      if (game.playerHands.length > 1) {
+        nextHandContainer.containerItems.push(
+          {
+            type: "actionrow",
+            row: createButtonsRow([
+              { emoji: "👐", customId: `blackjack:showHands:${userId}`, style: 2 },
+            ])
+          }
+        )
+      }
+
+      return {
+        type: 7,
+        data: {
+          flags: 32768,
+          components: createContainerUI(nextHandContainer)
+        }
+      };
+    } else {
+      games.delete(userId);
+      const standContainer = createContainerUI({
+        containerItems: [
+          {
+            type: "displaytext",
+            text: `## 🃏 Blackjack 🃏`,
+          },
+          {
+            type: "separator",
+            size: 2,
+            showDivider: true
+          },
+          {
+            type: "displaytext",
+            text: `**Your cards:** \`${game.formatHand(player[game.currentHandIndex])}\` \` ${game.getHandValue(player[game.currentHandIndex])} \``
+          },
+          {
+            type: "separator",
+            showDivider: false
+          },
+          {
+            type: "displaytext",
+            text: `**Dealer's card:** \`${game.formatHand(dealer)}\` \` ${game.getHandValue(dealer)} \``
+          },
+          {
+            type: "separator",
+            size: 2,
+            showDivider: true
+          },
+          {
+            type: "displaytext",
+            text: `**Result:** ${result}`
+          },
+          {
+            type: "actionrow",
+            row: createButtonsRow([
+              { emoji: "🔁", customId: `blackjack:restart:${userId}`, style: 2 },
+            ])
+          }
+        ]
+      })
+      return {
+        type: 7,
+        data: {
+          flags: 32768,
+          components: [...standContainer]
+        }
+      };
+    }
+  },
+  split: async (game, userId) => {
+    game.split();
+    const playerCards = game.playerHands[game.currentHandIndex]
+    const dealerCards = [game.dealer[0], { display: "❓" }];
+
+    const afterSplitButtons = [
+      { emoji: "👊", customId: `blackjack:hit:${userId}`, style: 1 },
+      { emoji: "🛑", customId: `blackjack:stand:${userId}`, style: 2 }
+    ];
+    if (game.canSplit()) {
+      afterSplitButtons.push({
+        style: 3, // success
+        emoji: "➗",
+        customId: `blackjack:split:${userId}`
+      });
+    }
+
+    const splitContainer = {
       containerItems: [
         {
           type: "displaytext",
@@ -105,7 +365,7 @@ const buttonHandlers = {
         },
         {
           type: "displaytext",
-          text: `**Your cards:** \`${playerCards.map(c => c.display).join(" ")}\` \` ${game.getHandValue(game.player)} \``
+          text: `**Hand ${game.currentHandIndex + 1}:** \`${game.formatHand(playerCards)}\` \` ${game.getHandValue(playerCards)} \``
         },
         {
           type: "separator",
@@ -113,131 +373,66 @@ const buttonHandlers = {
         },
         {
           type: "displaytext",
-          text: `**Dealer's card:** \`${dealerCards.map(c => c.display).join(" ")}\` \` ${game.getHandValue([game.dealer[0]])} \``
+          text: `**Dealer's card:** \`${game.formatHand(dealerCards)}\` \` ${game.getHandValue([game.dealer[0]])} \``
         },
         {
           type: "separator"
         },
         {
           type: 'actionrow',
-          row: buttons
+          row: createButtonsRow(afterSplitButtons)
         }
       ]
-    })
-
-    const bustContainer = createContainerUI({
-      containerItems: [
-        {
-          type: "displaytext",
-          text: `## 🃏 Blackjack 🃏`,
-        },
-        {
-          type: "separator",
-          size: 2,
-          showDivider: true
-        },
-        {
-          type: "displaytext",
-          text: `**Your cards:** \`${playerCards.map(c => c.display).join(" ")}\` \` ${game.getHandValue(game.player)} \``
-        },
-        {
-          type: "separator",
-          showDivider: false
-        },
-        {
-          type: "displaytext",
-          text: `**Dealer's card:** \`${dealerCards.map(c => c.display).join(" ")}\` \` ${game.getHandValue(game.dealer)} \``
-        },
-        {
-          type: "separator",
-          size: 2,
-          showDivider: true
-        },
-        {
-          type: "displaytext",
-          text: `**Result:** ${game.getResult()}`
-        },
+    }
+    if (game.playerHands.length > 1) {
+      splitContainer.containerItems.push(
         {
           type: "actionrow",
           row: createButtonsRow([
-            { emoji: "🔁", customId: `blackjack:restart:${userId}`, style: 2 },
+            { emoji: "👐", customId: `blackjack:showHands:${userId}`, style: 2 },
           ])
         }
-      ]
-    })
-
-    if (game.isGameOver) {
-      games.delete(userId);
-      return {
-        type: 7,
-        data: {
-          flags: 32768,
-          components: [...bustContainer]
-        }
-      };
+      )
     }
 
     return {
       type: 7,
-      data: {
-        flags: 32768,
-        components: [...hitContainer]
-      }
+      data: { flags: 32768, components: createContainerUI(splitContainer) }
     };
-  },
-  stand: async (game, userId) => {
-    const { player, dealer, result } = game.stand();
-    games.delete(userId);
 
-    const standContainer = createContainerUI({
+  },
+  showHands: async (game, userId) => {
+    const hands = game.finishedHands;
+    if (!hands || hands.length === 0) {
+      return {
+        type: 4,
+        data: { flags: 64, content: "No finished hands yet!" } // ephemeral
+      };
+    }
+    
+    const displayText = hands.map(h =>
+      `**Hand ${h.index + 1}:** ${game.formatHand(h.cards)} → ${game.getHandValue(h.cards)}`
+    ).join("\n");
+
+    const finishedHandsContainer = {
       containerItems: [
         {
           type: "displaytext",
-          text: `## 🃏 Blackjack 🃏`,
-        },
-        {
-          type: "separator",
-          size: 2,
-          showDivider: true
-        },
-        {
-          type: "displaytext",
-          text: `**Your cards:** \`${player.map(c => c.display).join(" ")}\` \` ${game.getHandValue(player)} \``
-        },
-        {
-          type: "separator",
-          showDivider: false
-        },
-        {
-          type: "displaytext",
-          text: `**Dealer's card:** \`${dealer.map(c => c.display).join(" ")}\` \` ${game.getHandValue(dealer)} \``
-        },
-        {
-          type: "separator",
-          size: 2,
-          showDivider: true
-        },
-        {
-          type: "displaytext",
-          text: `**Result:** ${result}`
-        },
-        {
-          type: "actionrow",
-          row: createButtonsRow([
-            { emoji: "🔁", customId: `blackjack:restart:${userId}`, style: 2 },
-          ])
+          text: `## Finished Hands (${game.finishedHands.length}/${game.playerHands.length}):\n\n${displayText}`
         }
       ]
-    })
+    }
+
     return {
-      type: 7,
+      type: 4,
       data: {
-        flags: 32768,
-        components: [...standContainer]
+        flags: 32768 + 64,
+        components: createContainerUI(finishedHandsContainer)
       }
     };
   },
-  restart: async (_game, userId, interaction) => {
+
+  restart: async (_game, userId) => {
     // start a fresh game
     const response = startNewGame(userId, true);
 
