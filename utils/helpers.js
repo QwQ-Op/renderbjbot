@@ -242,12 +242,3 @@ export function createModal(options = {}, { modalItems = [] }) {
 }
 
 
-export async function sendFollowup(interactionToken, payload) {
-    const url = `https://discord.com/api/v10/webhooks/${process.env.CLIENT_ID}/${interactionToken}`;
-    await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-  }
-  
