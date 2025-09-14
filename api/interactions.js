@@ -1,18 +1,13 @@
 import nacl from "tweetnacl";
 import dotenv from "dotenv";
 
-import invite from "../cmds/invite.js";
-import blackjackCmd, { games as blackjackGames, buttonHandlers as blackjackButtonHandlers } from "../cmds/blackjack.js";
+import { commands, commandGames } from "../handlers/cmdIndices.js";
+import { commandButtonHandlers } from "../handlers/buttonIndices.js";
 
 dotenv.config();
 
-const commands = { invite, blackjack: blackjackCmd };
 console.log("Loaded commands:", Object.keys(commands));
 
-// Map of button handlers per command
-const commandButtonHandlers = {
-  blackjack: blackjackButtonHandlers
-};
 
 export default async function handler(req, res) {
   const signature = req.header("X-Signature-Ed25519");
@@ -43,6 +38,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ type: 4, data: { flags: 64, content: "❌ Unknown command." } });
     }
     const response = await command.run(data);
+    console.dir(response, { depth: null });
     return res.status(200).json(response);
   }
 
@@ -50,14 +46,15 @@ export default async function handler(req, res) {
   // Component interaction (buttons)
   if (data.type === 3) {
     const [cmdName, action, userId] = data.data.custom_id.split(":");
-    const gameMap = cmdName === "blackjack" ? blackjackGames : null;
-    const handlerMap = commandButtonHandlers[cmdName];
 
-    if (!gameMap || !handlerMap) {
+    const handlerMap = commandButtonHandlers[cmdName];
+    const gameMap = commandGames[cmdName];
+
+    if (!handlerMap) {
       return res.status(200).json({ type: 4, data: { flags: 64, content: "❌ Unknown interaction." } });
     }
 
-    const game = gameMap.get(userId);
+    const game = gameMap ? gameMap.get(userId) : null;
     if (!game && action !== "restart") {
       return res.status(200).json({ type: 4, data: { flags: 64, content: "❌ You have no active game. Start a new one!" } });
     }
