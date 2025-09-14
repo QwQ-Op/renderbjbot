@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 export function createContainerUI(
     { containerItems = [] },
     options = {}
@@ -35,44 +38,51 @@ export function createContainerUI(
             }
         };
         if (item.type.toLowerCase() === 'section') {
-            const {
-                textDisplay = [],
-                useAccessory = false,
-                accessory,
-            } = item.options;
+            const { textDisplay = [], accessory } = item.options;
+
             const sections = {
                 type: 9,
                 components: []
-            }
+            };
+
             for (const things of textDisplay) {
                 sections.components.push({
-                    type: 10, //textDisplay
+                    type: 10, // textDisplay
                     content: things.text
-                })
+                });
             }
-            if (useAccessory) {
-                if (accessory?.type.toLowerCase() === 'button') {
+
+            if (accessory) {
+                if (accessory.type.toLowerCase() === 'button') {
                     const btn = {
                         type: 2, // Button
                         custom_id: accessory.customId,
-                        style: accessory.style ?? 1,  // Default to Primary
-                    }
+                        style: accessory.style ?? 1, // Default Primary
+                    };
                     if (accessory.label) btn.label = accessory.label;
                     if (accessory.emoji) btn.emoji = accessory.emoji;
                     sections.accessory = btn;
-                } else if (accessory?.type.toLowerCase() === 'thumbnail') {
-                    const thumbNail = {
+                } else if (accessory.type.toLowerCase() === 'thumbnail') {
+                    sections.accessory = {
                         type: 11, // Thumbnail
                         media: {
                             url: accessory.url
                         }
-                    }
-                    sections.accessory = thumbNail;
-
+                    };
                 }
+            } else {
+                // Fallback: always include a blank thumbnail
+                sections.accessory = {
+                    type: 11,
+                    media: {
+                        url: "https://cdn.discordapp.com/emojis/1400328762310004746.png"
+                    }
+                };
             }
+
             pushToBuilt(sections);
         }
+
         else if (item.type.toLowerCase() === 'actionrow') {
             pushToBuilt(item.row);
         }
@@ -230,3 +240,14 @@ export function createModal(options = {}, { modalItems = [] }) {
     }
     return modal;
 }
+
+
+export async function sendFollowup(interactionToken, payload) {
+    const url = `https://discord.com/api/v10/webhooks/${process.env.CLIENT_ID}/${interactionToken}`;
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  }
+  
