@@ -67,6 +67,6 @@ export default async function handler(req, res) {
     const response = await actionHandler(game, userId, data);
     return res.status(200).json(response);
   }
-
+  
   return res.status(400).send("Unhandled interaction type");
 }
