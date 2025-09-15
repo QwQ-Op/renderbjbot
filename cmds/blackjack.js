@@ -22,7 +22,7 @@ function startNewGame(userId, isUpdate = false) {
   games.set(userId, game);
 
   const initButtons = [
-    { emoji: "👊", customId: `blackjack:hit:${userId}`, style: 1 },
+    { emoji: "➕", customId: `blackjack:hit:${userId}`, style: 1 },
     { emoji: "🛑", customId: `blackjack:stand:${userId}`, style: 2 }
   ]
 
@@ -82,7 +82,7 @@ const buttonHandlers = {
     const { hands, gameOver, busted, handIndex } = game.hit();
     const playerCards = hands[game.currentHandIndex]
     const dealerCards = gameOver ?
-      game.dealer : [game.dealer[0], { display: "❓❓" }];
+      game.dealer : game.dealerInitialCards();
 
     const playerHandDisplay = game.playerHands.length > 1 ?
       `Hand ${game.currentHandIndex + 1}` : "Your cards"
@@ -141,8 +141,8 @@ const buttonHandlers = {
           {
             type: "actionrow",
             row: createButtonsRow([
-              { emoji: "📜", customId: `blackjack:showHands:${userId}`, style: 2 },
-              { emoji: "🔁", customId: `blackjack:restart:${userId}`, style: 2 }
+              { emoji: "🔁", customId: `blackjack:restart:${userId}`, style: 2 },
+              { emoji: "📜", customId: `blackjack:showHands:${userId}`, style: 2, disabled: game.playerHands.length === 1 }
             ])
           }
         ]
@@ -158,7 +158,7 @@ const buttonHandlers = {
       };
     } else {
       const hitButtons = [
-        { emoji: "👊", customId: `blackjack:hit:${userId}`, style: 1 },
+        { emoji: "➕", customId: `blackjack:hit:${userId}`, style: 1 },
         { emoji: "🛑", customId: `blackjack:stand:${userId}`, style: 2 }
       ];
       if (game.canSplit()) {
@@ -224,12 +224,12 @@ const buttonHandlers = {
   stand: async (game, userId) => {
     const { player, dealer, next, handIndex, result } = game.stand();
     const dealerCards = game.isGameOver ?
-      game.dealer : [game.dealer[0], { display: "❓❓" }];
+      game.dealer : game.dealerInitialCards();
 
     if (next) {
       const nextHand = game.playerHands[game.currentHandIndex];
       const nextHandButtons = [
-        { emoji: "👊", customId: `blackjack:hit:${userId}`, style: 1 },
+        { emoji: "➕", customId: `blackjack:hit:${userId}`, style: 1 },
         { emoji: "🛑", customId: `blackjack:stand:${userId}`, style: 2 }
       ]
       if (game.canSplit()) {
@@ -329,8 +329,8 @@ const buttonHandlers = {
           {
             type: "actionrow",
             row: createButtonsRow([
-              { emoji: "📜", customId: `blackjack:showHands:${userId}`, style: 2 },
               { emoji: "🔁", customId: `blackjack:restart:${userId}`, style: 2 },
+              { emoji: "📜", customId: `blackjack:showHands:${userId}`, style: 2, disabled: game.playerHands.length === 1 }
             ])
           }
         ]
@@ -347,10 +347,10 @@ const buttonHandlers = {
   split: async (game, userId) => {
     game.split();
     const playerCards = game.playerHands[game.currentHandIndex]
-    const dealerCards = [game.dealer[0], { display: "❓❓" }];
+    const dealerCards = game.dealerInitialCards();
 
     const afterSplitButtons = [
-      { emoji: "👊", customId: `blackjack:hit:${userId}`, style: 1 },
+      { emoji: "➕", customId: `blackjack:hit:${userId}`, style: 1 },
       { emoji: "🛑", customId: `blackjack:stand:${userId}`, style: 2 }
     ];
     if (game.canSplit()) {
